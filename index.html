@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KING ADMIN - Generate Codes</title>
-<style>
-  body { background:#000; color:#0f0; font-family:Arial; padding:20px; }
-  h2 { color:#0f0; }
-  input, button { padding:8px; margin:5px; border-radius:8px; border:none; }
-  input { width:120px; text-align:center; }
-  button { background:#0f0; color:#000; cursor:pointer; font-weight:bold; }
-  button:hover { background:#3f3; }
-  table { border-collapse:collapse; width:100%; margin-top:15px; }
-  th, td { border:1px solid #0f0; padding:6px; text-align:center; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KING ADMIN - Generate Codes</title>
+  <style>
+    body { background:#000; color:#0f0; font-family:Arial; padding:20px; }
+    h2 { color:#0f0; }
+    input, button { padding:8px; margin:5px; border-radius:8px; border:none; }
+    input { width:120px; text-align:center; }
+    button { background:#0f0; color:#000; cursor:pointer; font-weight:bold; }
+    button:hover { background:#3f3; }
+    table { border-collapse:collapse; width:100%; margin-top:15px; }
+    th, td { border:1px solid #0f0; padding:6px; text-align:center; }
+  </style>
 </head>
 <body>
 
@@ -37,51 +37,67 @@
   <tbody id="codesTable"></tbody>
 </table>
 
-<script>
-const STORAGE_KEY = "codes_storage_v1";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+  import { getDatabase, ref, set, get, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-function loadData(){
-  return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-}
-function saveData(data){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-function randomCode(){
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let c = "";
-  for(let i=0;i<5;i++){ 
-    for(let j=0;j<4;j++) c += chars[Math.floor(Math.random()*chars.length)];
-    if(i<4) c += "-";
+  const firebaseConfig = {
+    apiKey: "AIzaSyAF1K59iKFsVH-wyAKyGw2wsIMUIrT9WMg",
+    authDomain: "admin-3fd30.firebaseapp.com",
+    databaseURL: "https://admin-3fd30-default-rtdb.firebaseio.com",
+    projectId: "admin-3fd30",
+    storageBucket: "admin-3fd30.firebasestorage.app",
+    messagingSenderId: "981773176798",
+    appId: "1:981773176798:web:1ebc106e60af04ed8a174f",
+    measurementId: "G-35L6036ED8"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  function randomCode(){
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let c = "";
+    for(let i=0;i<5;i++){ 
+      for(let j=0;j<4;j++) c += chars[Math.floor(Math.random()*chars.length)];
+      if(i<4) c += "-";
+    }
+    return c;
   }
-  return c;
-}
-function generateCodes(){
-  const num = parseInt(document.getElementById("numCodes").value);
-  const uses = parseInt(document.getElementById("uses").value);
-  const data = loadData();
-  for(let i=0;i<num;i++){
-    data.push({ code: randomCode(), remaining: uses });
-  }
-  saveData(data);
-  renderTable();
-}
-function renderTable(){
-  const data = loadData();
-  const tbody = document.getElementById("codesTable");
-  tbody.innerHTML = "";
-  data.forEach(c=>{
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${c.code}</td><td>${c.remaining}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-function clearAll(){
-  if(confirm("مسح كل الأكواد؟")){
-    localStorage.removeItem(STORAGE_KEY);
+
+  window.generateCodes = async function(){
+    const num = parseInt(document.getElementById("numCodes").value);
+    const uses = parseInt(document.getElementById("uses").value);
+
+    for(let i=0;i<num;i++){
+      const code = randomCode();
+      await set(ref(db, "codes/" + code), { remaining: uses });
+    }
     renderTable();
   }
-}
-renderTable();
+
+  async function renderTable(){
+    const snapshot = await get(ref(db, "codes"));
+    const tbody = document.getElementById("codesTable");
+    tbody.innerHTML = "";
+    if(snapshot.exists()){
+      const data = snapshot.val();
+      Object.keys(data).forEach(code=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${code}</td><td>${data[code].remaining}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+  }
+
+  window.clearAll = async function(){
+    if(confirm("مسح كل الأكواد؟")){
+      await remove(ref(db, "codes"));
+      renderTable();
+    }
+  }
+
+  renderTable();
 </script>
 </body>
 </html>
