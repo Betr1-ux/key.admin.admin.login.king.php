@@ -55,24 +55,38 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  function randomCode(){
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let c = "";
-    for(let i=0;i<5;i++){ 
-      for(let j=0;j<4;j++) c += chars[Math.floor(Math.random()*chars.length)];
-      if(i<4) c += "-";
+  // === مولّد على نمط: XXXXX-XXXXX-XXXXX-XXXXX (HEX فقط) ===
+  function randomHexCode(){
+    const HEX = "0123456789ABCDEF";
+    const parts = [];
+    for(let g=0; g<4; g++){
+      let seg = "";
+      for(let i=0; i<5; i++){
+        seg += HEX[Math.floor(Math.random()*HEX.length)];
+      }
+      parts.push(seg);
     }
-    return c;
+    return parts.join("-");
   }
 
+  // توليد مع ضمان عدم تكرار الأكواد الموجودة بالفعل
   window.generateCodes = async function(){
     const num = parseInt(document.getElementById("numCodes").value);
     const uses = parseInt(document.getElementById("uses").value);
 
-    for(let i=0;i<num;i++){
-      const code = randomCode();
-      await set(ref(db, "codes/" + code), { remaining: uses });
+    const snap = await get(ref(db, "codes"));
+    const existing = new Set(snap.exists() ? Object.keys(snap.val()) : []);
+
+    const newCodes = [];
+    while(newCodes.length < num){
+      const code = randomHexCode();
+      if(!existing.has(code)){
+        existing.add(code);
+        newCodes.push(code);
+      }
     }
+
+    await Promise.all(newCodes.map(c => set(ref(db, "codes/" + c), { remaining: uses })));
     renderTable();
   }
 
@@ -82,7 +96,7 @@
     tbody.innerHTML = "";
     if(snapshot.exists()){
       const data = snapshot.val();
-      Object.keys(data).forEach(code=>{
+      Object.keys(data).sort().forEach(code=>{
         const tr = document.createElement("tr");
         tr.innerHTML = `<td>${code}</td><td>${data[code].remaining}</td>`;
         tbody.appendChild(tr);
@@ -90,11 +104,10 @@
     }
   }
 
+  // حذف مباشر بدون تأكيد
   window.clearAll = async function(){
-    if(confirm("مسح كل الأكواد؟")){
-      await remove(ref(db, "codes"));
-      renderTable();
-    }
+    await remove(ref(db, "codes"));
+    renderTable();
   }
 
   renderTable();
