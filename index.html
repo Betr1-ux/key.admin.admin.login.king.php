@@ -1,116 +1,93 @@
-<!DOCTYPE html>
-<html lang="ar">
+<!doctype html>
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KING ADMIN - Generate Codes</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>الإصدار متوقف</title>
   <style>
-    body { background:#000; color:#0f0; font-family:Arial; padding:20px; }
-    h2 { color:#0f0; }
-    input, button { padding:8px; margin:5px; border-radius:8px; border:none; }
-    input { width:120px; text-align:center; }
-    button { background:#0f0; color:#000; cursor:pointer; font-weight:bold; }
-    button:hover { background:#3f3; }
-    table { border-collapse:collapse; width:100%; margin-top:15px; }
-    th, td { border:1px solid #0f0; padding:6px; text-align:center; }
+    :root{
+      --bg:#f5f5f7;
+      --card:#fff;
+      --text:#222;
+      --muted:#555;
+      --danger:#e25a4a; /* عنوان أحمر قريب من الصورة */
+      --btn:#1976d2;    /* زر أزرق */
+      --btn-hover:#145ea8;
+      --radius:18px;
+      --shadow:0 10px 30px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,"Noto Naskh Arabic","Noto Kufi Arabic",sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100svh;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+    }
+    .wrap{
+      width:min(820px,100%);
+      padding:24px;
+    }
+    .card{
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:28px 22px 36px;
+      margin-top:28px;
+      text-align:center;
+    }
+    h1{
+      margin:0 0 18px;
+      font-size:clamp(26px,4.2vw,40px);
+      color:var(--danger);
+      letter-spacing:.5px;
+    }
+    p{
+      margin:0 auto 22px;
+      line-height:1.9;
+      font-size:clamp(15px,2.6vw,18px);
+      color:var(--muted);
+      max-width:46ch;
+    }
+    .btn{
+      display:inline-block;
+      padding:12px 20px;
+      border-radius:12px;
+      background:var(--btn);
+      color:#fff;
+      text-decoration:none;
+      font-weight:700;
+      font-size:18px;
+      transition:transform .06s ease, background .2s ease;
+      box-shadow:0 6px 16px rgba(25,118,210,.25);
+    }
+    .btn:active{ transform:scale(.98) }
+    .btn:hover{ background:var(--btn-hover) }
+    /* شريط علوي بسيط مثل واجهة الموبايل (اختياري) */
+    .topbar{
+      display:flex;gap:10px;align-items:center;color:#777;
+      font-size:14px; padding-inline:4px;
+    }
+    .url{
+      font-size:13px;color:#888; direction:ltr; unicode-bidi:plaintext;
+    }
   </style>
 </head>
 <body>
-
-<h2>لوحة توليد الأكواد</h2>
-
-<label>عدد الأكواد:</label>
-<input type="number" id="numCodes" value="5" min="1" max="100"><br>
-<label>عدد الاستخدامات لكل كود:</label>
-<input type="number" id="uses" value="1" min="1"><br>
-<button onclick="generateCodes()">توليد</button>
-<button onclick="clearAll()">مسح الكل</button>
-
-<h3>الأكواد المتاحة</h3>
-<table>
-  <thead>
-    <tr>
-      <th>الكود</th>
-      <th>الاستخدامات المتبقية</th>
-    </tr>
-  </thead>
-  <tbody id="codesTable"></tbody>
-</table>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-  import { getDatabase, ref, set, get, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyAF1K59iKFsVH-wyAKyGw2wsIMUIrT9WMg",
-    authDomain: "admin-3fd30.firebaseapp.com",
-    databaseURL: "https://admin-3fd30-default-rtdb.firebaseio.com",
-    projectId: "admin-3fd30",
-    storageBucket: "admin-3fd30.firebasestorage.app",
-    messagingSenderId: "981773176798",
-    appId: "1:981773176798:web:1ebc106e60af04ed8a174f",
-    measurementId: "G-35L6036ED8"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-
-  // === مولّد على نمط: XXXXX-XXXXX-XXXXX-XXXXX (HEX فقط) ===
-  function randomHexCode(){
-    const HEX = "0123456789ABCDEF";
-    const parts = [];
-    for(let g=0; g<4; g++){
-      let seg = "";
-      for(let i=0; i<5; i++){
-        seg += HEX[Math.floor(Math.random()*HEX.length)];
-      }
-      parts.push(seg);
-    }
-    return parts.join("-");
-  }
-
-  // توليد مع ضمان عدم تكرار الأكواد الموجودة بالفعل
-  window.generateCodes = async function(){
-    const num = parseInt(document.getElementById("numCodes").value);
-    const uses = parseInt(document.getElementById("uses").value);
-
-    const snap = await get(ref(db, "codes"));
-    const existing = new Set(snap.exists() ? Object.keys(snap.val()) : []);
-
-    const newCodes = [];
-    while(newCodes.length < num){
-      const code = randomHexCode();
-      if(!existing.has(code)){
-        existing.add(code);
-        newCodes.push(code);
-      }
-    }
-
-    await Promise.all(newCodes.map(c => set(ref(db, "codes/" + c), { remaining: uses })));
-    renderTable();
-  }
-
-  async function renderTable(){
-    const snapshot = await get(ref(db, "codes"));
-    const tbody = document.getElementById("codesTable");
-    tbody.innerHTML = "";
-    if(snapshot.exists()){
-      const data = snapshot.val();
-      Object.keys(data).sort().forEach(code=>{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${code}</td><td>${data[code].remaining}</td>`;
-        tbody.appendChild(tr);
-      });
-    }
-  }
-
-  // حذف مباشر بدون تأكيد
-  window.clearAll = async function(){
-    await remove(ref(db, "codes"));
-    renderTable();
-  }
-
-  renderTable();
-</script>
+  <main class="wrap">
+    <div class="card">
+      <h1>الإصدار متوقف</h1>
+      <p>
+        نأسف لإعلامك بأن هذا الإصدار من <b>@king_security</b> قد توقف.
+        للحصول على الإصدار الجديد، يُرجى التواصل مع المطوّر عبر تليجرام.
+      </p>
+      <a class="btn" href="https://t.me/nbvvte" target="_blank" rel="noopener">
+        @nbvvte
+      </a>
+    </div>
+  </main>
 </body>
 </html>
